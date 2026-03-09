@@ -1,4 +1,7 @@
+'use client';
+
 import { Bell, Briefcase, Info } from 'lucide-react';
+import Link from 'next/link';
 import type { NotificationType } from '@/types';
 
 export interface NotificationDisplay {
@@ -34,14 +37,18 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
   const Icon = typeIcons[notification.type as keyof typeof typeIcons] || Info;
   const iconColor = typeColors[notification.type as keyof typeof typeColors] || 'text-slate-400';
 
-  return (
+  const handleClick = () => {
+    if (!notification.isRead) onRead?.(notification.id);
+  };
+
+  const content = (
     <div
       className={`flex gap-3 p-4 rounded-lg border transition-colors cursor-pointer ${
         notification.isRead
           ? 'bg-slate-800/50 border-slate-700/50'
           : 'bg-slate-800 border-slate-600 hover:border-slate-500'
       }`}
-      onClick={() => !notification.isRead && onRead?.(notification.id)}
+      onClick={handleClick}
     >
       <div className={`mt-0.5 shrink-0 ${iconColor}`}>
         <Icon size={18} />
@@ -62,4 +69,14 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
       </div>
     </div>
   );
+
+  if (notification.opportunityId) {
+    return (
+      <Link href={`/opportunities/${notification.opportunityId}`} className="block">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }

@@ -92,6 +92,15 @@ export async function PATCH(
       data: updateData,
     });
 
+    // Cancel pending reminders when the opportunity reaches a terminal state
+    const TERMINAL_STATUSES = ['APPLIED', 'REJECTED', 'SELECTED', 'MISSED'];
+    if (status && TERMINAL_STATUSES.includes(status)) {
+      await prisma.reminder.updateMany({
+        where: { opportunityId: id, status: 'PENDING' },
+        data: { status: 'CANCELLED' },
+      });
+    }
+
     return NextResponse.json({
       opportunity: {
         ...updated,

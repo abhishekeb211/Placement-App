@@ -68,3 +68,43 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+/**
+ * PATCH /api/reminders
+ * Cancel all pending reminders for a given opportunity.
+ * Body: { opportunityId: string }
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { opportunityId } = body;
+
+    if (!opportunityId) {
+      return NextResponse.json({ error: 'opportunityId is required' }, { status: 400 });
+    }
+
+    // Verify the opportunity belongs to this user
+    const opportunity = await prisma.opportunity.findFirst({
+      where: { id: opportunityId, userId: session.user.id },
+    });
+
+    if (!opportunity) {
+      return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 });
+    }
+
+    const { count } = await prisma.reminder.updateMany({
+      where: { opportunityId, userId: session.user.id, status: 'PENDING' },
+      data: { status: 'CANCELLED' },
+    });
+
+    return NextResponse.json({ cancelled: count });
+  } catch (error) {
+    console.error('[REMINDERS_PATCH]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

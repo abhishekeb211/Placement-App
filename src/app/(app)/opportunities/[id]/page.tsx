@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, MapPin, Calendar, DollarSign, Link as LinkIcon,
-  Bell, BellOff, Trash2, TrendingUp, FileText, Lightbulb
+  Bell, BellOff, Trash2, TrendingUp, FileText, Lightbulb, Clock
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ScoreRing } from '@/components/ui/ScoreRing';
-import type { Opportunity, OpportunityStatus, FitScoreResult, ATSScoreResult, RecommendationResult } from '@/types';
+import type { Opportunity, OpportunityStatus, FitScoreResult, ATSScoreResult, RecommendationResult, Reminder } from '@/types';
 
 const STATUS_OPTIONS: OpportunityStatus[] = [
   'NEW', 'OPENED', 'IN_PROGRESS', 'APPLIED', 'MISSED',
@@ -23,6 +23,7 @@ export default function OpportunityDetailPage() {
   const id = params.id as string;
 
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -30,6 +31,7 @@ export default function OpportunityDetailPage() {
   const [atsResult, setAtsResult] = useState<ATSScoreResult | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationResult | null>(null);
   const [scoringLoading, setScoringLoading] = useState(false);
+  const [cancellingReminders, setCancellingReminders] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -38,11 +40,14 @@ export default function OpportunityDetailPage() {
       if (data.opportunity) {
         setOpportunity(data.opportunity);
         setNotes(data.opportunity.notes || '');
+        setReminders(data.opportunity.reminders || []);
       }
       setLoading(false);
     }
     load();
   }, [id]);
+
+  const pendingRemindersCount = reminders.filter((r) => r.status === 'PENDING').length;
 
   const updateStatus = async (status: OpportunityStatus) => {
     const res = await fetch(`/api/opportunities/${id}`, {
@@ -51,7 +56,16 @@ export default function OpportunityDetailPage() {
       body: JSON.stringify({ status }),
     });
     const data = await res.json();
-    if (data.opportunity) setOpportunity(data.opportunity);
+    if (data.opportunity) {
+      setOpportunity(data.opportunity);
+      // Reflect reminder cancellations for terminal statuses
+      const TERMINAL_STATUSES: OpportunityStatus[] = ['APPLIED', 'REJECTED', 'SELECTED', 'MISSED'];
+      if (TERMINAL_STATUSES.includes(status)) {
+        setReminders((prev) =>
+          prev.map((r) => r.status === 'PENDING' ? { ...r, status: 'CANCELLED' } : r)
+        );
+      }
+    }
   };
 
   const saveNotes = async () => {
@@ -62,6 +76,22 @@ export default function OpportunityDetailPage() {
       body: JSON.stringify({ notes }),
     });
     setSaving(false);
+  };
+
+  const cancelAllReminders = async () => {
+    setCancellingReminders(true);
+    try {
+      await fetch('/api/reminders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opportunityId: id }),
+      });
+      setReminders((prev) =>
+        prev.map((r) => r.status === 'PENDING' ? { ...r, status: 'CANCELLED' } : r)
+      );
+    } finally {
+      setCancellingReminders(false);
+    }
   };
 
   const runScoring = async () => {
@@ -121,6 +151,24 @@ export default function OpportunityDetailPage() {
           <h1 className="text-xl font-bold text-white truncate">{opportunity.title}</h1>
           <p className="text-slate-400 text-sm">{opportunity.company}</p>
         </div>
+        {/* Reminder indicator */}
+        <button
+          onClick={pendingRemindersCount > 0 ? cancelAllReminders : undefined}
+          disabled={cancellingReminders || pendingRemindersCount === 0}
+          title={pendingRemindersCount > 0 ? `${pendingRemindersCount} pending reminder(s) — click to cancel` : 'No active reminders'}
+          className={`relative p-1 transition-colors ${
+            pendingRemindersCount > 0
+              ? 'text-amber-400 hover:text-amber-300 cursor-pointer'
+              : 'text-slate-600 cursor-default'
+          }`}
+        >
+          {pendingRemindersCount > 0 ? <Bell size={18} /> : <BellOff size={18} />}
+          {pendingRemindersCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-black text-[9px] font-bold rounded-full flex items-center justify-center">
+              {pendingRemindersCount > 9 ? '9+' : pendingRemindersCount}
+            </span>
+          )}
+        </button>
         <button onClick={deleteOpportunity} className="text-slate-500 hover:text-red-400 transition-colors p-1">
           <Trash2 size={18} />
         </button>
@@ -261,6 +309,55 @@ export default function OpportunityDetailPage() {
                   <p className="text-xs font-medium text-white">{rec.skill}</p>
                   <p className="text-xs text-slate-500">{rec.reason}</p>
                 </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Reminders */}
+      {reminders.length > 0 && (
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Clock size={14} className="text-amber-400" /> Reminders
+            </h3>
+            {pendingRemindersCount > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={cancelAllReminders}
+                loading={cancellingReminders}
+                className="text-xs text-slate-400 hover:text-red-400"
+              >
+                Cancel all
+              </Button>
+            )}
+          </div>
+          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            {reminders.map((r) => (
+              <div
+                key={r.id}
+                className={`flex items-center justify-between text-xs rounded-lg px-2.5 py-1.5 ${
+                  r.status === 'PENDING'
+                    ? 'bg-amber-900/20 border border-amber-800/40'
+                    : r.status === 'SENT'
+                    ? 'bg-emerald-900/20 border border-emerald-800/40'
+                    : 'bg-slate-800 border border-slate-700'
+                }`}
+              >
+                <span className="text-slate-300">
+                  {new Date(r.scheduledAt).toLocaleString(undefined, {
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                  })}
+                </span>
+                <span className={`font-medium capitalize ${
+                  r.status === 'PENDING' ? 'text-amber-400' :
+                  r.status === 'SENT' ? 'text-emerald-400' :
+                  'text-slate-500'
+                }`}>
+                  {r.status.toLowerCase()}
+                </span>
               </div>
             ))}
           </div>

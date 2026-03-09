@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { generateReminders } from '@/lib/reminderEngine';
+import type { Opportunity, OpportunityStatus } from '@/types';
 
 function parseSkills(skillsStr: string): string[] {
   try {
@@ -86,6 +88,45 @@ export async function POST(request: NextRequest) {
         requirements: requirements || null,
         skills: JSON.stringify(skills || []),
         status: 'NEW',
+      },
+    });
+
+    // Auto-schedule reminders using the reminder engine
+    const parsedOpp: Opportunity = {
+      ...opportunity,
+      role: opportunity.role ?? undefined,
+      location: opportunity.location ?? undefined,
+      deadline: opportunity.deadline ?? undefined,
+      salaryRange: opportunity.salaryRange ?? undefined,
+      sourceEmail: opportunity.sourceEmail ?? undefined,
+      requirements: opportunity.requirements ?? undefined,
+      notes: opportunity.notes ?? undefined,
+      status: opportunity.status as OpportunityStatus,
+      skills: parseSkills(opportunity.skills),
+      extractedLinks: parseLinks(opportunity.extractedLinks),
+    };
+
+    const reminders = generateReminders(parsedOpp);
+    if (reminders.length > 0) {
+      await prisma.reminder.createMany({
+        data: reminders.map((r) => ({
+          userId: session.user.id,
+          opportunityId: opportunity.id,
+          scheduledAt: r.scheduledAt,
+          type: r.type,
+          status: 'PENDING',
+        })),
+      });
+    }
+
+    // Create an initial "new opportunity" notification
+    await prisma.notification.create({
+      data: {
+        userId: session.user.id,
+        opportunityId: opportunity.id,
+        title: 'New Opportunity Detected',
+        body: `${title} at ${company} has been added to your tracker.`,
+        type: 'OPPORTUNITY',
       },
     });
 
