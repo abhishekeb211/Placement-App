@@ -7,6 +7,7 @@ interface BadgeProps {
 }
 
 const statusConfig: Record<string, { label: string; classes: string }> = {
+  // Opportunity statuses
   NEW: { label: 'New', classes: 'bg-blue-900/50 text-blue-300 border-blue-700' },
   OPENED: { label: 'Opened', classes: 'bg-slate-700 text-slate-300 border-slate-600' },
   IN_PROGRESS: { label: 'In Progress', classes: 'bg-yellow-900/50 text-yellow-300 border-yellow-700' },
@@ -17,6 +18,12 @@ const statusConfig: Record<string, { label: string; classes: string }> = {
   INTERVIEW_SCHEDULED: { label: 'Interview', classes: 'bg-indigo-900/50 text-indigo-300 border-indigo-700' },
   REJECTED: { label: 'Rejected', classes: 'bg-red-900/60 text-red-400 border-red-700' },
   SELECTED: { label: '🎉 Selected', classes: 'bg-emerald-900/50 text-emerald-300 border-emerald-700' },
+  // Application statuses
+  PENDING: { label: 'Pending', classes: 'bg-slate-700 text-slate-300 border-slate-600' },
+  SUBMITTED: { label: 'Submitted', classes: 'bg-blue-900/50 text-blue-300 border-blue-700' },
+  IN_REVIEW: { label: 'In Review', classes: 'bg-yellow-900/50 text-yellow-300 border-yellow-700' },
+  OFFER_RECEIVED: { label: '🎁 Offer', classes: 'bg-green-900/50 text-green-300 border-green-700' },
+  WITHDRAWN: { label: 'Withdrawn', classes: 'bg-slate-700 text-slate-500 border-slate-600' },
 };
 
 export function Badge({ status, className = '' }: BadgeProps) {

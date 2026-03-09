@@ -4,18 +4,31 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, MapPin, Calendar, DollarSign, Link as LinkIcon,
-  Bell, BellOff, Trash2, TrendingUp, FileText, Lightbulb, Clock
+  Bell, BellOff, Trash2, TrendingUp, FileText, Lightbulb, Clock,
+  ClipboardList, ExternalLink,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ScoreRing } from '@/components/ui/ScoreRing';
 import { TERMINAL_STATUSES } from '@/lib/constants';
-import type { Opportunity, OpportunityStatus, FitScoreResult, ATSScoreResult, RecommendationResult, Reminder } from '@/types';
+import Link from 'next/link';
+import type { Opportunity, OpportunityStatus, FitScoreResult, ATSScoreResult, RecommendationResult, Reminder, Application } from '@/types';
 
 const STATUS_OPTIONS: OpportunityStatus[] = [
   'NEW', 'OPENED', 'IN_PROGRESS', 'APPLIED', 'MISSED',
   'SHORTLISTED', 'TEST_RECEIVED', 'INTERVIEW_SCHEDULED', 'REJECTED', 'SELECTED',
+];
+
+const APPLICATION_STATUSES = [
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+  { value: 'IN_REVIEW', label: 'In Review' },
+  { value: 'INTERVIEW_SCHEDULED', label: 'Interview Scheduled' },
+  { value: 'OFFER_RECEIVED', label: 'Offer Received' },
+  { value: 'SELECTED', label: 'Selected' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'WITHDRAWN', label: 'Withdrawn' },
 ];
 
 /** Max number shown on the Bell badge before showing "9+" */
@@ -36,15 +49,39 @@ export default function OpportunityDetailPage() {
   const [recommendations, setRecommendations] = useState<RecommendationResult | null>(null);
   const [scoringLoading, setScoringLoading] = useState(false);
   const [cancellingReminders, setCancellingReminders] = useState(false);
+  const [application, setApplication] = useState<Application | null | undefined>(undefined);
+  const [appStatus, setAppStatus] = useState('PENDING');
+  const [appNotes, setAppNotes] = useState('');
+  const [appOutcome, setAppOutcome] = useState('');
+  const [appAppliedAt, setAppAppliedAt] = useState('');
+  const [startingTracking, setStartingTracking] = useState(false);
+  const [savingApp, setSavingApp] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const res = await fetch(`/api/opportunities/${id}`);
-      const data = await res.json();
-      if (data.opportunity) {
-        setOpportunity(data.opportunity);
-        setNotes(data.opportunity.notes || '');
-        setReminders(data.opportunity.reminders || []);
+      const [oppRes, appsRes] = await Promise.all([
+        fetch(`/api/opportunities/${id}`),
+        fetch('/api/applications'),
+      ]);
+      const [oppData, appsData] = await Promise.all([oppRes.json(), appsRes.json()]);
+      if (oppData.opportunity) {
+        setOpportunity(oppData.opportunity);
+        setNotes(oppData.opportunity.notes || '');
+        setReminders(oppData.opportunity.reminders || []);
+      }
+      if (appsData.applications) {
+        const found = (appsData.applications as Application[]).find(
+          (a) => a.opportunityId === id
+        ) ?? null;
+        setApplication(found);
+        if (found) {
+          setAppStatus(found.status);
+          setAppNotes(found.notes ?? '');
+          setAppOutcome(found.outcome ?? '');
+          setAppAppliedAt(found.appliedAt ? new Date(found.appliedAt).toISOString().slice(0, 10) : '');
+        }
+      } else {
+        setApplication(null);
       }
       setLoading(false);
     }
@@ -120,6 +157,42 @@ export default function OpportunityDetailPage() {
     } finally {
       setScoringLoading(false);
     }
+  };
+
+  const startTracking = async () => {
+    setStartingTracking(true);
+    const res = await fetch('/api/applications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ opportunityId: id }),
+    });
+    const data = await res.json();
+    if (data.application) {
+      setApplication(data.application);
+      setAppStatus(data.application.status);
+      setAppNotes(data.application.notes ?? '');
+      setAppOutcome(data.application.outcome ?? '');
+      setAppAppliedAt('');
+    }
+    setStartingTracking(false);
+  };
+
+  const saveApplicationTracker = async () => {
+    if (!application) return;
+    setSavingApp(true);
+    const res = await fetch(`/api/applications/${application.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: appStatus,
+        notes: appNotes || null,
+        outcome: appOutcome || null,
+        appliedAt: appAppliedAt || null,
+      }),
+    });
+    const data = await res.json();
+    if (data.application) setApplication(data.application);
+    setSavingApp(false);
   };
 
   const deleteOpportunity = async () => {
@@ -409,6 +482,89 @@ export default function OpportunityDetailPage() {
           <p className="text-xs text-slate-400 whitespace-pre-wrap leading-relaxed">
             {opportunity.requirements}
           </p>
+        </Card>
+      )}
+
+      {/* Application Tracker */}
+      {application !== undefined && (
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <ClipboardList size={15} className="text-blue-400" />
+              Application Tracker
+            </h3>
+            <Link href="/applications" className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300">
+              All applications <ExternalLink size={11} />
+            </Link>
+          </div>
+
+          {application === null ? (
+            <div className="text-center py-4">
+              <p className="text-slate-400 text-sm mb-3">Not tracking this application yet</p>
+              <Button size="sm" variant="primary" onClick={startTracking} loading={startingTracking}>
+                Start Tracking
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge status={application.status} />
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Application Status</label>
+                <select
+                  value={appStatus}
+                  onChange={(e) => setAppStatus(e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {APPLICATION_STATUSES.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Applied Date */}
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Applied Date</label>
+                <input
+                  type="date"
+                  value={appAppliedAt}
+                  onChange={(e) => setAppAppliedAt(e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Outcome */}
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Outcome</label>
+                <input
+                  type="text"
+                  value={appOutcome}
+                  onChange={(e) => setAppOutcome(e.target.value)}
+                  placeholder="e.g. Got offer, Rejected after round 2..."
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Notes</label>
+                <textarea
+                  value={appNotes}
+                  onChange={(e) => setAppNotes(e.target.value)}
+                  rows={3}
+                  placeholder="Add notes about this application..."
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              <Button size="sm" variant="primary" onClick={saveApplicationTracker} loading={savingApp}>
+                Save
+              </Button>
+            </div>
+          )}
         </Card>
       )}
     </div>
