@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { ReminderProcessor } from '@/components/reminders/ReminderProcessor';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -18,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="max-w-4xl mx-auto px-4 py-6">{children}</div>
       </main>
       <BottomNav />
+      <ReminderProcessor />
     </div>
   );
 }

@@ -37,7 +37,7 @@ export default async function DashboardPage() {
 
   const userId = session.user.id;
 
-  const [opportunities, pendingReminders, notifications, profile] = await Promise.all([
+  const [opportunities, pendingReminders, notifications] = await Promise.all([
     prisma.opportunity.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -50,7 +50,6 @@ export default async function DashboardPage() {
       take: 5,
       include: { opportunity: { select: { id: true, title: true, company: true } } },
     }),
-    prisma.profile.findUnique({ where: { userId } }),
   ]);
 
   const totalOpps = await prisma.opportunity.count({ where: { userId } });
@@ -58,9 +57,15 @@ export default async function DashboardPage() {
     where: { userId, status: 'APPLIED' },
   });
 
-  const fitScores = opportunities.map((o) => o.fitScore).filter((s): s is number => s !== null);
+  // Compute avg fit score from ALL scored opportunities, not just the recent 5
+  const scoredOpps = await prisma.opportunity.findMany({
+    where: { userId, fitScore: { not: null } },
+    select: { fitScore: true },
+  });
   const avgFitScore =
-    fitScores.length > 0 ? Math.round(fitScores.reduce((a, b) => a + b, 0) / fitScores.length) : null;
+    scoredOpps.length > 0
+      ? Math.round(scoredOpps.reduce((sum, o) => sum + (o.fitScore ?? 0), 0) / scoredOpps.length)
+      : null;
 
   const stats = [
     { label: 'Total Opportunities', value: totalOpps, icon: Briefcase, color: 'text-blue-400' },

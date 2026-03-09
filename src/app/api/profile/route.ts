@@ -20,7 +20,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+      // Auto-create an empty profile rather than returning 404
+      const newProfile = await prisma.profile.create({
+        data: { userId: session.user.id, skills: '[]' },
+      });
+      return NextResponse.json({
+        profile: { ...newProfile, skills: [] },
+        user,
+      });
     }
 
     return NextResponse.json({
