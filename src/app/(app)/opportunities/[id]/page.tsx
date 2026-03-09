@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, MapPin, Calendar, DollarSign, Link as LinkIcon,
@@ -10,12 +10,16 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ScoreRing } from '@/components/ui/ScoreRing';
+import { TERMINAL_STATUSES } from '@/lib/constants';
 import type { Opportunity, OpportunityStatus, FitScoreResult, ATSScoreResult, RecommendationResult, Reminder } from '@/types';
 
 const STATUS_OPTIONS: OpportunityStatus[] = [
   'NEW', 'OPENED', 'IN_PROGRESS', 'APPLIED', 'MISSED',
   'SHORTLISTED', 'TEST_RECEIVED', 'INTERVIEW_SCHEDULED', 'REJECTED', 'SELECTED',
 ];
+
+/** Max number shown on the Bell badge before showing "9+" */
+const MAX_BADGE_COUNT = 9;
 
 export default function OpportunityDetailPage() {
   const params = useParams();
@@ -49,6 +53,13 @@ export default function OpportunityDetailPage() {
 
   const pendingRemindersCount = reminders.filter((r) => r.status === 'PENDING').length;
 
+  /** Marks all pending reminders in local state as CANCELLED */
+  const markRemindersAsCancelled = useCallback(() => {
+    setReminders((prev) =>
+      prev.map((r) => r.status === 'PENDING' ? { ...r, status: 'CANCELLED' as const } : r)
+    );
+  }, []);
+
   const updateStatus = async (status: OpportunityStatus) => {
     const res = await fetch(`/api/opportunities/${id}`, {
       method: 'PATCH',
@@ -59,11 +70,8 @@ export default function OpportunityDetailPage() {
     if (data.opportunity) {
       setOpportunity(data.opportunity);
       // Reflect reminder cancellations for terminal statuses
-      const TERMINAL_STATUSES: OpportunityStatus[] = ['APPLIED', 'REJECTED', 'SELECTED', 'MISSED'];
       if (TERMINAL_STATUSES.includes(status)) {
-        setReminders((prev) =>
-          prev.map((r) => r.status === 'PENDING' ? { ...r, status: 'CANCELLED' } : r)
-        );
+        markRemindersAsCancelled();
       }
     }
   };
@@ -86,9 +94,7 @@ export default function OpportunityDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ opportunityId: id }),
       });
-      setReminders((prev) =>
-        prev.map((r) => r.status === 'PENDING' ? { ...r, status: 'CANCELLED' } : r)
-      );
+      markRemindersAsCancelled();
     } finally {
       setCancellingReminders(false);
     }
@@ -165,7 +171,7 @@ export default function OpportunityDetailPage() {
           {pendingRemindersCount > 0 ? <Bell size={18} /> : <BellOff size={18} />}
           {pendingRemindersCount > 0 && (
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-black text-[9px] font-bold rounded-full flex items-center justify-center">
-              {pendingRemindersCount > 9 ? '9+' : pendingRemindersCount}
+              {pendingRemindersCount > MAX_BADGE_COUNT ? `${MAX_BADGE_COUNT}+` : pendingRemindersCount}
             </span>
           )}
         </button>

@@ -8,8 +8,10 @@ import { useEffect } from 'react';
  */
 export function ReminderProcessor() {
   useEffect(() => {
-    fetch('/api/reminders/check').catch(() => {
-      // Non-critical — ignore errors silently
+    fetch('/api/reminders/check').catch((err) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[ReminderProcessor]', err);
+      }
     });
   }, []);
 

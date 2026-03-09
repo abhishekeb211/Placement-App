@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { TERMINAL_STATUSES } from '@/lib/constants';
 
 function parseSkills(skillsStr: string): string[] {
   try {
@@ -93,8 +94,7 @@ export async function PATCH(
     });
 
     // Cancel pending reminders when the opportunity reaches a terminal state
-    const TERMINAL_STATUSES = ['APPLIED', 'REJECTED', 'SELECTED', 'MISSED'];
-    if (status && TERMINAL_STATUSES.includes(status)) {
+    if (status && TERMINAL_STATUSES.includes(status as typeof TERMINAL_STATUSES[number])) {
       await prisma.reminder.updateMany({
         where: { opportunityId: id, status: 'PENDING' },
         data: { status: 'CANCELLED' },

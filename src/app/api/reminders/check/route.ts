@@ -34,11 +34,19 @@ export async function GET() {
     }
 
     // Create notifications for each due reminder
+    const REMINDER_TITLES: Record<string, string> = {
+      IMMEDIATE: 'New Opportunity Reminder',
+      DAILY: 'Daily Application Reminder',
+      SIX_HOUR: '6-Hour Warning',
+      HOURLY: 'Hourly Reminder',
+      THIRTY_MIN: 'Final 30-Minute Alert',
+    };
+
     await prisma.notification.createMany({
       data: dueReminders.map((r) => ({
         userId: session.user.id,
         opportunityId: r.opportunityId,
-        title: r.type === 'IMMEDIATE' ? 'New Opportunity Reminder' : 'Application Reminder',
+        title: REMINDER_TITLES[r.type] ?? 'Application Reminder',
         body: r.opportunity
           ? `Don't forget: ${r.opportunity.title} at ${r.opportunity.company}`
           : 'You have a pending application reminder.',
