@@ -11,11 +11,13 @@ import {
   User,
   LogOut,
   GraduationCap,
+  ClipboardList,
 } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
   { href: '/opportunities', icon: Briefcase, label: 'Opportunities' },
+  { href: '/applications', icon: ClipboardList, label: 'Applications' },
   { href: '/notifications', icon: Bell, label: 'Notifications' },
   { href: '/resume', icon: FileText, label: 'Resume' },
   { href: '/profile', icon: User, label: 'Profile' },
