@@ -1,39 +1,11 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Upload, FileText, X, CheckCircle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
 import type { ParsedResumeData } from '@/types';
 
 interface ResumeUploadProps {
   onUpload?: (data: ParsedResumeData) => void;
-}
-
-function simulateParsing(filename: string): ParsedResumeData {
-  // Demo parsed data — in production, integrate a real PDF parser
-  return {
-    name: 'Student Name',
-    email: 'student@example.com',
-    phone: '+91 9876543210',
-    summary: 'Computer Science student with passion for software development',
-    skills: ['JavaScript', 'React', 'Node.js', 'Python', 'SQL', 'Git'],
-    education: [
-      {
-        institution: 'Example University',
-        degree: 'B.Tech Computer Science',
-        year: '2024',
-        cgpa: 8.5,
-      },
-    ],
-    experience: [],
-    projects: [
-      {
-        name: 'E-Commerce Platform',
-        description: 'Built a full-stack e-commerce platform using React and Node.js',
-        technologies: ['React', 'Node.js', 'MongoDB'],
-      },
-    ],
-  };
 }
 
 export function ResumeUpload({ onUpload }: ResumeUploadProps) {
@@ -58,24 +30,25 @@ export function ResumeUpload({ onUpload }: ResumeUploadProps) {
     setUploading(true);
 
     try {
-      const parsedData = simulateParsing(selectedFile.name);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
 
       const res = await fetch('/api/resume', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: selectedFile.name.replace(/\s+/g, '_'),
-          originalName: selectedFile.name,
-          parsedData,
-        }),
+        body: formData,
       });
 
-      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
 
       setUploaded(true);
-      onUpload?.(parsedData);
-    } catch {
-      setError('Upload failed. Please try again.');
+      onUpload?.(data.resume.parsedData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
+      setFile(null);
     } finally {
       setUploading(false);
     }
@@ -131,8 +104,9 @@ export function ResumeUpload({ onUpload }: ResumeUploadProps) {
           />
           {file && uploading ? (
             <>
-              <FileText size={32} className="text-blue-400 mb-3" />
-              <p className="text-sm text-slate-300">Parsing {file.name}...</p>
+              <FileText size={32} className="text-blue-400 mb-3 animate-pulse" />
+              <p className="text-sm text-slate-300">Parsing {file.name}…</p>
+              <p className="text-xs text-slate-500 mt-1">Extracting skills, education and projects</p>
             </>
           ) : (
             <>
@@ -145,7 +119,12 @@ export function ResumeUpload({ onUpload }: ResumeUploadProps) {
         </div>
       )}
 
-      {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+      {error && (
+        <div className="flex items-start gap-2 mt-2 text-xs text-red-400">
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
+      )}
     </div>
   );
 }
