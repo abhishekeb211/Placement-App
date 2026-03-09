@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { parseResumeText } from '@/lib/resumeParser';
 
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -80,7 +82,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Only PDF and Word documents are supported' }, { status: 400 });
       }
 
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
         return NextResponse.json({ error: 'File size must be less than 5 MB' }, { status: 400 });
       }
 

@@ -1,5 +1,13 @@
 import type { ParsedResumeData } from '@/types';
 
+// ─── Limits ───────────────────────────────────────────────────────────────────
+
+const MAX_SUMMARY_LENGTH = 600;
+const MAX_SKILLS_COUNT = 30;
+const MAX_FALLBACK_SKILLS_COUNT = 20;
+const MAX_PROJECTS_COUNT = 6;
+const MAX_CERTIFICATIONS_COUNT = 10;
+
 // ─── Regex helpers ────────────────────────────────────────────────────────────
 
 const EMAIL_RE = /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/;
@@ -93,7 +101,7 @@ function extractName(headerLines: string[], email?: string): string | undefined 
 
 function extractSummary(lines: string[]): string | undefined {
   const joined = lines.join(' ').trim();
-  return joined.length > 20 ? joined.substring(0, 600) : undefined;
+  return joined.length > 20 ? joined.substring(0, MAX_SUMMARY_LENGTH) : undefined;
 }
 
 function extractSkills(lines: string[]): string[] {
@@ -116,7 +124,7 @@ function extractSkills(lines: string[]): string[] {
   // Filter out junk (lines that are too long to be skill names)
   return Array.from(found)
     .filter((s) => s.length < 40 && !/^\d+$/.test(s))
-    .slice(0, 30);
+    .slice(0, MAX_SKILLS_COUNT);
 }
 
 function extractEducation(
@@ -263,14 +271,14 @@ function extractProjects(
   }
   flush();
 
-  return projects.slice(0, 6);
+  return projects.slice(0, MAX_PROJECTS_COUNT);
 }
 
 function extractCertifications(lines: string[]): string[] {
   return lines
     .map((l) => l.replace(/^[-•·▪◦\d.]+\s*/, '').trim())
     .filter((l) => l.length > 5 && l.length < 120)
-    .slice(0, 10);
+    .slice(0, MAX_CERTIFICATIONS_COUNT);
 }
 
 // ─── Main parser ──────────────────────────────────────────────────────────────
@@ -300,7 +308,7 @@ export function parseResumeText(text: string): ParsedResumeData {
   // If no skills section, try extracting from full text
   const skills = skillsLines.length > 0
     ? extractSkills(skillsLines)
-    : KNOWN_SKILLS.filter((s) => text.toLowerCase().includes(s)).slice(0, 20);
+    : KNOWN_SKILLS.filter((s) => text.toLowerCase().includes(s)).slice(0, MAX_FALLBACK_SKILLS_COUNT);
 
   const education = extractEducation(eduLines) ?? [];
   const experience = expLines.length > 0 ? (extractExperience(expLines) ?? []) : [];
