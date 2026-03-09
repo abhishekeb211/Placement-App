@@ -1,0 +1,143 @@
+// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile       Profile?
+  resumes       Resume[]
+  opportunities Opportunity[]
+  reminders     Reminder[]
+  notifications Notification[]
+  applications  Application[]
+  emailSources  EmailSource[]
+}
+
+model Profile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  phone        String?
+  college      String?
+  degree       String?
+  year         Int?
+  cgpa         Float?
+  skills       String   @default("[]")
+  bio          String?
+  linkedinUrl  String?
+  githubUrl    String?
+  portfolioUrl String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Resume {
+  id           String   @id @default(cuid())
+  userId       String
+  filename     String
+  originalName String
+  parsedData   String   @default("{}")
+  isActive     Boolean  @default(false)
+  uploadedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailSource {
+  id           String    @id @default(cuid())
+  userId       String
+  provider     String
+  accessToken  String?
+  refreshToken String?
+  lastSyncAt   DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Opportunity {
+  id             String   @id @default(cuid())
+  userId         String
+  title          String
+  company        String
+  role           String?
+  location       String?
+  deadline       DateTime?
+  salaryRange    String?
+  sourceEmail    String?
+  extractedLinks String   @default("[]")
+  requirements   String?
+  skills         String   @default("[]")
+  status         String   @default("NEW")
+  fitScore       Int?
+  atsScore       Int?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminders    Reminder[]
+  notifications Notification[]
+  applications Application[]
+}
+
+model Reminder {
+  id            String    @id @default(cuid())
+  userId        String
+  opportunityId String
+  scheduledAt   DateTime
+  sentAt        DateTime?
+  type          String    @default("IMMEDIATE")
+  status        String    @default("PENDING")
+  createdAt     DateTime  @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id            String   @id @default(cuid())
+  userId        String
+  opportunityId String?
+  title         String
+  body          String
+  type          String   @default("SYSTEM")
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+}
+
+model Application {
+  id            String    @id @default(cuid())
+  userId        String
+  opportunityId String
+  status        String    @default("PENDING")
+  notes         String?
+  appliedAt     DateTime?
+  outcome       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+}
