@@ -1,41 +1,40 @@
-# Prerequisites
-*.d
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# Build outputs
+/.next/
+/out/
+/build/
+dist/
 
-# Precompiled Headers
-*.gch
-*.pch
+# PWA generated files
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
 
-# Linker files
-*.ilk
+# Env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Debugger Files
-*.pdb
+# Database
+prisma/*.db
+prisma/*.db-journal
+prisma/migrations/
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Fortran module files
-*.mod
-*.smod
+# OS
+.DS_Store
+Thumbs.db
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# debug information files
-*.dwo
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
