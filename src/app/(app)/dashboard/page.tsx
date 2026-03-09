@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { OpportunityCard } from '@/components/opportunities/OpportunityCard';
 import { NotificationItem } from '@/components/notifications/NotificationItem';
 import { Briefcase, Bell, Clock, TrendingUp, ClipboardList, CheckCircle } from 'lucide-react';
+import Link from 'next/link';
 import type { Opportunity, Notification, OpportunityStatus } from '@/types';
 import type { NotificationDisplay } from '@/components/notifications/NotificationItem';
 
@@ -130,9 +131,9 @@ export default async function DashboardPage() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-white">Recent Opportunities</h2>
-          <a href="/opportunities" className="text-xs text-blue-400 hover:text-blue-300">
+          <Link href="/opportunities" className="text-xs text-blue-400 hover:text-blue-300">
             View all
-          </a>
+          </Link>
         </div>
         {parsedOpportunities.length === 0 ? (
           <Card className="text-center py-8">
@@ -153,9 +154,9 @@ export default async function DashboardPage() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-white">Recent Notifications</h2>
-          <a href="/notifications" className="text-xs text-blue-400 hover:text-blue-300">
+          <Link href="/notifications" className="text-xs text-blue-400 hover:text-blue-300">
             View all
-          </a>
+          </Link>
         </div>
         {parsedNotifications.length === 0 ? (
           <Card className="text-center py-6">
@@ -178,9 +179,9 @@ export default async function DashboardPage() {
             <ClipboardList size={16} className="text-blue-400" />
             My Applications
           </h2>
-          <a href="/applications" className="text-xs text-blue-400 hover:text-blue-300">
+          <Link href="/applications" className="text-xs text-blue-400 hover:text-blue-300">
             View all
-          </a>
+          </Link>
         </div>
         {recentApplications.length === 0 ? (
           <Card className="text-center py-6">
@@ -191,7 +192,7 @@ export default async function DashboardPage() {
         ) : (
           <div className="space-y-2">
             {recentApplications.map((app) => (
-              <a key={app.id} href={`/opportunities/${app.opportunityId}`}>
+              <Link key={app.id} href={`/opportunities/${app.opportunityId}`}>
                 <Card padding="sm" className="flex items-center justify-between gap-3 hover:bg-slate-700/50 transition-colors cursor-pointer">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{app.opportunity.company}</p>
@@ -201,7 +202,7 @@ export default async function DashboardPage() {
                   </div>
                   <Badge status={app.status} />
                 </Card>
-              </a>
+              </Link>
             ))}
           </div>
         )}

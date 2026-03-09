@@ -61,7 +61,7 @@ export default function OpportunityDetailPage() {
     async function load() {
       const [oppRes, appsRes] = await Promise.all([
         fetch(`/api/opportunities/${id}`),
-        fetch('/api/applications'),
+        fetch(`/api/applications?opportunityId=${id}`),
       ]);
       const [oppData, appsData] = await Promise.all([oppRes.json(), appsRes.json()]);
       if (oppData.opportunity) {

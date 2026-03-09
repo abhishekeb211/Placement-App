@@ -13,15 +13,21 @@ const opportunitySelect = {
   status: true,
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const opportunityId = searchParams.get('opportunityId');
+
     const applications = await prisma.application.findMany({
-      where: { userId: session.user.id },
+      where: {
+        userId: session.user.id,
+        ...(opportunityId ? { opportunityId } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       include: { opportunity: { select: opportunitySelect } },
     });
