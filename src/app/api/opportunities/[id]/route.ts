@@ -21,7 +21,7 @@ function parseLinks(linksStr: string): string[] {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -29,8 +29,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const opportunity = await prisma.opportunity.findFirst({
-      where: { id: params.id, userId: session.user.id },
+      where: { id, userId: session.user.id },
       include: {
         reminders: { orderBy: { scheduledAt: 'asc' } },
         applications: { orderBy: { createdAt: 'desc' } },
@@ -56,7 +57,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -64,11 +65,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { status, notes, fitScore, atsScore, skills, deadline, salaryRange, location } = body;
 
     const existing = await prisma.opportunity.findFirst({
-      where: { id: params.id, userId: session.user.id },
+      where: { id, userId: session.user.id },
     });
 
     if (!existing) {
@@ -86,7 +88,7 @@ export async function PATCH(
     if (location !== undefined) updateData.location = location;
 
     const updated = await prisma.opportunity.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
@@ -105,7 +107,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -113,15 +115,16 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const existing = await prisma.opportunity.findFirst({
-      where: { id: params.id, userId: session.user.id },
+      where: { id, userId: session.user.id },
     });
 
     if (!existing) {
       return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 });
     }
 
-    await prisma.opportunity.delete({ where: { id: params.id } });
+    await prisma.opportunity.delete({ where: { id } });
 
     return NextResponse.json({ message: 'Opportunity deleted successfully' });
   } catch (error) {

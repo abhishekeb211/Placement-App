@@ -1,14 +1,14 @@
 /** @type {import('next').NextConfig} */
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
+const withSerwist = require('@serwist/next').default;
+
+const withSerwistConfig = withSerwist({
+  swSrc: 'src/sw.ts',
+  swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
 });
 
 const nextConfig = {
-  swcMinify: true,
   reactStrictMode: true,
 };
 
-module.exports = withPWA(nextConfig);
+module.exports = withSerwistConfig(nextConfig);

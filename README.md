@@ -8,11 +8,11 @@ A PWA-style web app for iOS and Android that helps students:
 - Get personalized skill recommendations
 
 ## Tech Stack
-- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS
+- **Frontend**: Next.js 15 (App Router) + TypeScript + Tailwind CSS
 - **Backend**: Next.js API Routes
 - **Database**: Prisma ORM + SQLite (dev) / PostgreSQL (prod)
 - **Auth**: NextAuth.js (credentials)
-- **PWA**: next-pwa
+- **PWA**: @serwist/next (service worker + precaching)
 
 ## Getting Started
 1. Install dependencies: `npm install`
